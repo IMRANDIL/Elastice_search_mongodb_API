@@ -95,7 +95,32 @@ const searchProduct = async (req, res, next) => {
   }
 };
 
+// Function to reindex all products
+async function reindexAllProducts() {
+  try {
+    const allProducts = await Product.find(); // Retrieve all products from the database
+
+    // Delete and recreate the Elasticsearch index with appropriate mappings
+    await client.indices.delete({
+      index: "products",
+      ignore_unavailable: true,
+    });
+    await client.indices.create({
+      index: "products",
+      // ... (index settings and mappings)
+    });
+
+    // Index each product in Elasticsearch
+    for (const product of allProducts) {
+      await indexProduct(product.toJSON());
+    }
+  } catch (error) {
+    console.error("Error during reindexing:", error);
+  }
+}
+
 module.exports = {
   createProduct,
   searchProduct,
+  reindexAllProducts,
 };

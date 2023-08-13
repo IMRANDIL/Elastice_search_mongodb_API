@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const compression = require("compression");
+const { reindexAllProducts } = require("./controllers/product.controller");
 
 const app = express();
 
@@ -28,9 +29,17 @@ mongoose
   .connect(process.env.URI)
   .then(() => {
     console.info("mongo db connected");
-    app.listen(PORT, () => {
-      console.info(`Server running on port ${PORT}`);
-    });
+    // Call the reindexAllProducts function before starting the server
+    reindexAllProducts()
+      .then(() => {
+        console.info("Reindexing completed");
+        app.listen(PORT, () => {
+          console.info(`Server running on port ${PORT}`);
+        });
+      })
+      .catch((error) => {
+        console.error("Reindexing error:", error);
+      });
   })
   .catch((err) => {
     console.error(`ouch mongo db connection failed: ${err}`);
