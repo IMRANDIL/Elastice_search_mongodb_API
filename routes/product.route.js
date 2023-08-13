@@ -1,3 +1,4 @@
+const { query } = require("express-validator");
 const {
   createProduct,
   searchProduct,

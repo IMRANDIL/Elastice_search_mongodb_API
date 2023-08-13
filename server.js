@@ -14,6 +14,10 @@ const app = express();
 app.use(cors());
 app.use(compression());
 
+//routing middleware
+
+app.use("/api/v1", require("./routes/product.route"));
+
 const PORT = process.env.PORT || 8000;
 
 //now establish the connection with db
