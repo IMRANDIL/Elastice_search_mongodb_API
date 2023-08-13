@@ -6,11 +6,21 @@ const client = new Client({ node: "http://localhost:9200" });
 async function indexProduct(product) {
   await client.index({
     index: "products",
-    body: product,
+    id: product._id.toString(), // Use MongoDB _id as Elasticsearch document ID
+    body: {
+      ...product,
+      _id: undefined, // Exclude _id field from the indexed document
+    },
   });
 }
 
 const createProduct = async (req, res, next) => {
+  if (!req.body) {
+    return res.status(400).json({
+      success: false,
+      msg: "Request body invalid",
+    });
+  }
   try {
     const newProduct = new Product(req.body);
     await newProduct.save();
