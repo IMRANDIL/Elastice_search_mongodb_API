@@ -15,25 +15,25 @@ async function indexProduct(product) {
 }
 
 // Function to check if Elasticsearch is up and running
-// async function checkElasticsearchConnection() {
-//   try {
-//     const response = await client.ping();
-//     console.log(response);
-//     return response.statusCode === 200;
-//   } catch (error) {
-//     return false;
-//   }
-// }
+async function checkElasticsearchConnection() {
+  try {
+    const response = await client.ping();
+    console.log(response);
+    return response;
+  } catch (error) {
+    return false;
+  }
+}
 
 const createProduct = async (req, res, next) => {
   // Check if Elasticsearch is available
-  // const isElasticsearchAvailable = await checkElasticsearchConnection();
-  // if (!isElasticsearchAvailable) {
-  //   return res.status(500).json({
-  //     success: false,
-  //     msg: "Elasticsearch is not available",
-  //   });
-  // }
+  const isElasticsearchAvailable = await checkElasticsearchConnection();
+  if (!isElasticsearchAvailable) {
+    return res.status(500).json({
+      success: false,
+      msg: "Elasticsearch is not available",
+    });
+  }
 
   if (Object.keys(req.body).length === 0) {
     return res.status(400).json({
@@ -54,23 +54,21 @@ const createProduct = async (req, res, next) => {
 
 const searchProduct = async (req, res) => {
   // Check if Elasticsearch is available
-  // const isElasticsearchAvailable = await checkElasticsearchConnection();
-  // console.log(isElasticsearchAvailable);
-  // if (!isElasticsearchAvailable) {
-  //   return res.status(500).json({
-  //     success: false,
-  //     msg: "Elasticsearch is not available",
-  //   });
-  // }
+  const isElasticsearchAvailable = await checkElasticsearchConnection();
+  console.log(isElasticsearchAvailable);
+  if (!isElasticsearchAvailable) {
+    return res.status(500).json({
+      success: false,
+      msg: "Elasticsearch is not available",
+    });
+  }
 
   try {
     const { q, category, minPrice, maxPrice, size, sort } = req.query;
 
     const searchQuery = {
       index: "products",
-      body: {
-        size: size || 10,
-      },
+      body: {},
     };
 
     // if (q || category || (!isNaN(minPrice) && !isNaN(maxPrice))) {
@@ -114,13 +112,13 @@ const searchProduct = async (req, res) => {
     //   searchQuery.body.sort = sortFields.map((field) => ({ [field]: "asc" }));
     // }
 
-    const { body } = await client.search(searchQuery);
-
-    if (body && body.hits && body.hits.hits) {
-      const hits = body.hits.hits.map((hit) => hit._source);
+    const response = await client.search(searchQuery);
+    console.log(response);
+    if (response && response.hits && response.hits.hits) {
+      const hits = response.hits.hits.map((hit) => hit._source);
       res.json(hits);
     } else {
-      console.error("Unexpected Elasticsearch response:", body);
+      console.error("Unexpected Elasticsearch response:");
       res.status(500).json({ error: "An error occurred" });
     }
   } catch (error) {
@@ -157,4 +155,5 @@ module.exports = {
   createProduct,
   searchProduct,
   reindexAllProducts,
+  checkElasticsearchConnection,
 };

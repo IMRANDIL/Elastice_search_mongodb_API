@@ -39,7 +39,6 @@ async function connectAndStartApp() {
   try {
     await waitForElasticsearch();
     console.log("Elasticsearch is ready, starting app...");
-
     // Now you can proceed with your app startup
     mongoose
       .connect(process.env.URI)
