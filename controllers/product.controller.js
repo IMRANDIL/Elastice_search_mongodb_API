@@ -1,7 +1,7 @@
 const { Client } = require("@elastic/elasticsearch");
 const Product = require("../models/product.model");
 const { validationResult } = require("express-validator");
-const client = new Client({ node: "http://localhost:9200" });
+const client = new Client({ node: "http://elasticsearch:9200" });
 
 async function indexProduct(product) {
   await client.index({
@@ -14,7 +14,27 @@ async function indexProduct(product) {
   });
 }
 
+// Function to check if Elasticsearch is up and running
+// async function checkElasticsearchConnection() {
+//   try {
+//     const response = await client.ping();
+//     console.log(response);
+//     return response.statusCode === 200;
+//   } catch (error) {
+//     return false;
+//   }
+// }
+
 const createProduct = async (req, res, next) => {
+  // Check if Elasticsearch is available
+  // const isElasticsearchAvailable = await checkElasticsearchConnection();
+  // if (!isElasticsearchAvailable) {
+  //   return res.status(500).json({
+  //     success: false,
+  //     msg: "Elasticsearch is not available",
+  //   });
+  // }
+
   if (Object.keys(req.body).length === 0) {
     return res.status(400).json({
       success: false,
@@ -32,63 +52,77 @@ const createProduct = async (req, res, next) => {
   }
 };
 
-const searchProduct = async (req, res, next) => {
-  // Check for validation errors
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const query = req.query.q; // User's search query
-  const category = req.query.category; // Category filter
-  const minPrice = parseFloat(req.query.minPrice); // Min price filter
-  const maxPrice = parseFloat(req.query.maxPrice); // Max price filter
+const searchProduct = async (req, res) => {
+  // Check if Elasticsearch is available
+  // const isElasticsearchAvailable = await checkElasticsearchConnection();
+  // console.log(isElasticsearchAvailable);
+  // if (!isElasticsearchAvailable) {
+  //   return res.status(500).json({
+  //     success: false,
+  //     msg: "Elasticsearch is not available",
+  //   });
+  // }
 
   try {
+    const { q, category, minPrice, maxPrice, size, sort } = req.query;
+
     const searchQuery = {
-      bool: {
-        must: [],
+      index: "products",
+      body: {
+        size: size || 10,
       },
     };
 
-    if (query) {
-      searchQuery.bool.must.push({
-        multi_match: {
-          query,
-          fields: ["name^2", "description"],
-        },
-      });
+    // if (q || category || (!isNaN(minPrice) && !isNaN(maxPrice))) {
+    //   searchQuery.body.query = {
+    //     bool: {
+    //       must: [],
+    //     },
+    //   };
+
+    //   if (q) {
+    //     searchQuery.body.query.bool.must.push({
+    //       multi_match: {
+    //         query: q,
+    //         fields: ["name^2", "description"],
+    //       },
+    //     });
+    //   }
+
+    //   if (category) {
+    //     searchQuery.body.query.bool.must.push({
+    //       match: {
+    //         category,
+    //       },
+    //     });
+    //   }
+
+    //   if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+    //     searchQuery.body.query.bool.must.push({
+    //       range: {
+    //         price: {
+    //           gte: minPrice,
+    //           lte: maxPrice,
+    //         },
+    //       },
+    //     });
+    //   }
+    // }
+
+    // if (sort) {
+    //   const sortFields = sort.split(",");
+    //   searchQuery.body.sort = sortFields.map((field) => ({ [field]: "asc" }));
+    // }
+
+    const { body } = await client.search(searchQuery);
+
+    if (body && body.hits && body.hits.hits) {
+      const hits = body.hits.hits.map((hit) => hit._source);
+      res.json(hits);
+    } else {
+      console.error("Unexpected Elasticsearch response:", body);
+      res.status(500).json({ error: "An error occurred" });
     }
-
-    if (category) {
-      searchQuery.bool.must.push({
-        match: {
-          category,
-        },
-      });
-    }
-
-    if (!isNaN(minPrice) && !isNaN(maxPrice)) {
-      searchQuery.bool.must.push({
-        range: {
-          price: {
-            gte: minPrice,
-            lte: maxPrice,
-          },
-        },
-      });
-    }
-
-    const { body } = await client.search({
-      index: "products",
-      body: {
-        query: searchQuery,
-        sort: [{ price: "asc" }], // Sort results by price ascending
-      },
-    });
-
-    const hits = body.hits.hits.map((hit) => hit._source);
-    res.json(hits);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "An error occurred" });
