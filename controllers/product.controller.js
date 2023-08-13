@@ -68,7 +68,9 @@ const searchProduct = async (req, res) => {
 
     const searchQuery = {
       index: "products",
-      body: {},
+      body: {
+        size: size,
+      },
     };
 
     // if (q || category || (!isNaN(minPrice) && !isNaN(maxPrice))) {
